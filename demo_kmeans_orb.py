@@ -1,27 +1,21 @@
 """
 
-A Vanilla KMeans Algorithm.
+A demo of the k-means with ORB descriptors computed on a set of images.
 
-Should be tested for speed.
+In this case, a hierarchical clustering is performed.
 
-Classifications considers an index vector and does not copy the data.
+Using:
+    - Binary ORB descriptors numbers.
+    - A Hamming distance function to compute the distance between two descriptors.
+    - An average mean function to find each cluster center.
 
-Further improvements could add a different distance function
+    Best results are obtained when using the k-means++ initialization method.
+    Use the option plot_progress=True to view the movement and assignation of the centroids at each algorithm step.
 
-https://pythonprogramming.net/k-means-from-scratch-2-machine-learning-tutorial/?completed=/k-means-from-scratch-machine-learning-tutorial/
-
-https://gist.github.com/wildonion/245ca496293ee537214b3dbbb3c558c9
-predict --> 10000 datos --> 5.94 s
 """
-# import pandas as pd
-
-# import matplotlib.pyplot as plt
-# from matplotlib import style
 import json
-# style.use('ggplot')
 import numpy as np
 import time
-
 from cluster.kmeans import KMeans
 
 
@@ -49,11 +43,7 @@ def flatten_list(all_descriptors):
 
 
 def load_data(sampling=None, max_index=None):
-    all_descriptors = []
-    # load all descriptors and form a cluster
-    # for path in paths:
     all_descriptors = read_descriptors('data/descriptors.json')
-        # all_descriptors.extend(desc)
     all_descriptors = flatten_list(all_descriptors)
     if max_index is None:
         max_index = len(all_descriptors)
@@ -64,40 +54,16 @@ def load_data(sampling=None, max_index=None):
     return X
 
 
-
 if __name__ == '__main__':
+    # Loading 1000 ORB descriptors from file
+    X = load_data(1, 1000)
 
-    # X = np.array([[1, 2],
-    #               [1.5, 1.8],
-    #               [5, 8],
-    #               [8, 8],
-    #               [1, 0.6],
-    #               [9, 11],
-    #               [1, 3],
-    #               [8, 9],
-    #               [0, 3],
-    #               [5, 4],
-    #               [6, 4],])
-
-    X = np.array([[0, 0, 0],
-                  [1, 1, 0],
-                  [2, 0, 0],
-                  [3, 0, 0],
-                  [4, 0, 0],
-                  [5, 0, 0],
-                  [6, 0, 0],
-                  [7, 0, 0],
-                  [8, 0, 0],
-                  [9, 0, 0],
-                  [10, 0, 0],
-                  [11, 0, 0],
-                  [12, 0, 0],
-                  [13, 0, 0],
-                  [14, 0, 0], ])
-
-    # X = load_data(1, 10000)
-
-    clf = KMeans()
+    clf = KMeans(k=100, tol=0.001, max_iter=500,
+                 # distance_function='hamming',
+                 averaging_function='mean-round',
+                 centroid_replacement=False,
+                 init_method='kmeans++',
+                 plot_progress=False)
     print("Using data size: ", len(X))
     start_time = time.time()
     clf.fit(X)
@@ -108,6 +74,6 @@ if __name__ == '__main__':
     for c in clf.centroids:
         print(clf.centroids[c])
     # classify and plot
-    clf.plot(X)
+    clf.plot(X, 'Final result!')
 
 

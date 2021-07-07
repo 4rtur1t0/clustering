@@ -1,29 +1,45 @@
 """
+A vanilla k-medoids algorithm.
 
-A Vanilla KMeans Algorithm.
 
-Should be tested for speed.
+1-->  entender ejemplo
+https://towardsdatascience.com/k-medoids-clustering-on-iris-data-set-1931bf781e05
 
-Classifications considers an index vector and does not copy the data.
+2-- comprobar
+https://github.com/eriklindernoren/ML-From-Scratch/blob/master/mlfromscratch/unsupervised_learning/partitioning_around_medoids.py
 
-Further improvements could add a different distance function
 
-https://pythonprogramming.net/k-means-from-scratch-2-machine-learning-tutorial/?completed=/k-means-from-scratch-machine-learning-tutorial/
+3 --> Revisar estos papers
+https://link.springer.com/content/pdf/10.1007/s10846-020-01230-z.pdf
 
-https://gist.github.com/wildonion/245ca496293ee537214b3dbbb3c558c9
-predict --> 10000 datos --> 5.94 s
+https://pdf.sciencedirectassets.com/271506/1-s2.0-S0957417400X00905/1-s2.0-S0957417402001859/main.pdf?X-Amz-Security-Token=IQoJb3JpZ2luX2VjEPz%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCXVzLWVhc3QtMSJGMEQCIGp5Oz9Ym6NfDed997ybS%2BON2c4rnWWdM1Nqa0dui4sHAiBLUFggj0ibDrDDnh0eB%2FT%2B7pfIZ9A%2FyHA7PH4M3L3%2B8CqDBAjV%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAQaDDA1OTAwMzU0Njg2NSIMbR0xectNehv%2Be%2F6MKtcDYI%2B2k5LcuPKOo%2B4NAX8n3%2BwBDb%2BppBB1%2F6OG465gL9mAIWbubdRBhIj7PIqT5itDLtloJ2ueI%2BYZ7bb2RGUBy6VBmwuGeV%2BcV5T9VhANHeLhAVJy3K2dWVUkIloEr5oIMHYT61S4j86WrYQQVtbTa1rtfuKBG%2F9renlH99oHpi7tjHbbetTnBT%2Bmbg13llyD18ncC6IiYNNojiK2wXG3Rt%2FGFua9JDPyGvW6ny1r8hiYfF6S254EKf3nJgd3KNhBqN3hlggXSg0jeXsLKUWeUCTgPy1GoZ6Pf4o5dOx0WtsCZ%2F2tnm%2FD2MPJnxqeclO%2F2mD0qMg8bHWo%2Fi0KfB5%2FbbYKAgv0iM6QtyUKrSO5w9Vn0JiVWDQVcTva3sZVD0Jw1lPBC6a6lwVzU%2FXJDZOT%2B%2FuKD%2Bhoq6wEU7IrL7wK4JuBFVGkAsOh6u1VOKi%2F4H6T4BI1bE9hPo7%2FSQ7HuA8vYJIsXY7MvjOiQJ272VR9493NtCjzsRrNlvW0QuSAOL4fw76SLZvV0TANpBPrR322aU6awNQ0xLyEV8hlAhyCcYWzL2kFjHKR9yfebIy7okLxUG%2FbecI9hKUmunnrVs4eHPJqREdh3gQdbFyLBNiVRZKT4XmIOOZNMIf1%2B4YGOqYBILBhqXoZz5awS1gcRjrlvlso2neTCHLQqMJs%2BS7qYMVXoPy03QCfZribfpl5sUNBTVq2J03bS1aROIoJVI7GdjxPyWnV1zGkIC6%2FSQB2yXqdsbJX3NT61O9lDdnWCLLOUo1DnZ4Mx2KJsUincsjqeEv6uoh6cPKs7VGKP1WPK7YiDUW87H1JO3P%2BmZctavBL12X0pdgFyIrhBgu6NSW5hUTUrU%2FNGQ%3D%3D&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20210702T120513Z&X-Amz-SignedHeaders=host&X-Amz-Expires=300&X-Amz-Credential=ASIAQ3PHCVTYYN7MTX6X%2F20210702%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=e0cefac661fec2be15a90a569ba2b364fa810dd7d68bee103ec46bf4e413e7c3&hash=513c045afb1fd325a2e26fadfefb0b452e7520051eafb038e55b84068fe06823&host=68042c943591013ac2b2430a89b270f6af2c76d8dfd086a07176afe7c76c2c61&pii=S0957417402001859&tid=spdf-b466b110-99f1-4f21-9b7b-2572228dc6ac&sid=c8017ae2588a164a2b2978d74f6e637dac49gxrqb&type=client
+
+
+https://pythonprogramming.net/mean-shift-from-scratch-python-machine-learning-tutorial/?completed=/mean-shift-titanic-dataset-machine-learning-tutorial/
+
+https://pythonprogramming.net/hierarchical-clustering-mean-shift-machine-learning-tutorial/?completed=/k-means-from-scratch-2-machine-learning-tutorial/
+https://medium.com/analytics-vidhya/supernaive-k-medoids-clustering-31db7bfc5075
+
+https://towardsdatascience.com/k-medoids-clustering-on-iris-data-set-1931bf781e05
+https://github.com/eriklindernoren/ML-From-Scratch/blob/master/mlfromscratch/unsupervised_learning/dbscan.py
+
+https://www.sciencedirect.com/science/article/pii/S095741740800081X
+
+https://www.geeksforgeeks.org/ml-k-medoids-clustering-with-example/
+
+
+Aggregating Binary Local Descriptors
+for Image Retrieval
+https://arxiv.org/pdf/1608.00813.pdf
+
+http://www.nmis.isti.cnr.it/falchi/Draft/2016-VISAPP-BinaryFeatures-DRAFT.pdf
 """
-import pandas as pd
-
+# import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import style
-import json
-
+# import json
 style.use('ggplot')
 import numpy as np
-# import time
-
-
 
 # _nbits[k] is the number of 1s in the binary representation of k for 0 <= k < 256.
 _nbits = np.array(
@@ -55,7 +71,6 @@ def hamming(a, b):
     c = np.bitwise_xor(a, b)
     n = _nbits[c].sum()
     return n
-
 
 
 class KMedoids():
@@ -104,17 +119,17 @@ class KMedoids():
     def fit_iteration(self, data):
         """
         A iteration of the kmeans algorithm
+         maintain a list where each datapoint points to one of the clusters.
+
+        assign each datapoint to the closest centroid (assign each datapoint to a cluster)
+        each label[i] stores the cluster associated to the datapoint data[i]
+        No copying of datapoints to other variables is done, thus reducing the amount of memory required.
         :param data:
         :return:
         """
-        # maintain a list where each datapoint points to one of the clusters.
-        # labels are initialized to -1. Thus all -1 should be replaced with its corresponding classes.
-        self.labels = -1*np.ones(self.N, dtype=np.int8)
-        # self.distances = np.zeros(self.N)
-        # assign each datapoint to the closest centroid (assign each datapoint to a cluster)
-        # each label[i] stores the cluster associated to the datapoint data[i]
-        # [self.labels, self.distances] = self.predict(data)
-        [self.labels, self.distances] = self.predict2(data)
+        #
+        [self.labels, self.distances] = self.predict(data)
+        # [self.labels, self.distances] = self.predict2(data)
         self.update_centroids(data)
         # compute the total cost of the current assigment based on the previous distances
         cost = np.sum(self.distances)
@@ -135,8 +150,10 @@ class KMedoids():
             datapoint = data[i]
             # compute the distance of each datapoint to all clusters,find closest one and assign to it
             distances_to_centroids = []
-            for centroid in self.centroids:
-                distances_to_centroids.append(np.linalg.norm(datapoint - self.centroids[centroid]))
+            for k in range(0, self.k):
+                # compute the hamming distance between datapoint i and cluster k
+                distances_to_centroids.append(hamming(datapoint, self.centroids[k]))
+                # distances_to_centroids.append(np.linalg.norm(datapoint - self.centroids[centroid]))
             # find min distance and its index (cluster index)
             min_dist = np.amin(distances_to_centroids)
             k_i = np.where(distances_to_centroids == min_dist)
@@ -178,6 +195,15 @@ class KMedoids():
         """
         find the position of the new centroids.
         in the vanilla k-means this is done by averaging all the datapoints assigned to each cluster
+        In the k-medoids algorithm, a voting scheme is deployed. This is generally called k-majority voting. As a result
+        the new cluster
+
+        Updating:
+         1) iterate along along the datapoints of each cluster.
+         2) consider that each datapoint may be a new medoid
+         3) compute a cost for that new medoid.
+         4) Select the minimum cost
+         requires the computation of N distances per cluster
         :param data:
         :return:
         """
