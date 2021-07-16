@@ -8,17 +8,15 @@ Using:
     - A standard averaging function.
 
     Best results are obtained when using the k-means++ initialization method.
+
     Use the option plot_progress=True to view the movement and assignation of the centroids at each algorithm step.
 
 Some inspiration:
     https://pythonprogramming.net/k-means-from-scratch-2-machine-learning-tutorial/?completed=/k-means-from-scratch-machine-learning-tutorial/
     https://gist.github.com/wildonion/245ca496293ee537214b3dbbb3c558c9
-
 """
-import json
 import numpy as np
 import time
-
 from cluster.kmeans import KMeans
 
 
@@ -28,7 +26,7 @@ def generate_data(n_samples=250, centers=2, data_type=np.float64):
     X, y = make_blobs(n_samples=n_samples,
                       centers=centers,
                       cluster_std=0.50,
-                      random_state=1)
+                      random_state=0)
 
     if data_type == np.uint8:
         X = np.round(X) + np.array([10, 10])
@@ -39,7 +37,7 @@ def generate_data(n_samples=250, centers=2, data_type=np.float64):
     for k, col in enumerate(colors):
         cluster_data = (y == k)
         plt.scatter(X[cluster_data, 0], X[cluster_data, 1],
-                    c=col, marker='.', s=10)
+                    c=col, marker='.', s=20)
     # plt.scatter(centers_init[:, 0], centers_init[:, 1], c='b', s=50)
     plt.title("Data generated")
     plt.show()
@@ -47,14 +45,15 @@ def generate_data(n_samples=250, centers=2, data_type=np.float64):
 
 
 if __name__ == '__main__':
-    n_samples = 1500
-    centers = 5
+    n_samples = 500
+    centers = 6
     X, y = generate_data(n_samples=n_samples, centers=centers)
 
     clf = KMeans(k=centers, tol=0.001, max_iter=500,
                  distance_function='euclidean',
                  centroid_replacement=False,
                  init_method='kmeans++',
+                 # init_method='random',
                  plot_progress=True)
     print("Using data size: ", len(X))
     start_time = time.time()
