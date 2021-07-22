@@ -105,61 +105,12 @@ https://medium.datadriveninvestor.com/unsupervised-learning-with-python-k-means-
 
 
 """
-import pandas as pd
-
 import matplotlib.pyplot as plt
 from matplotlib import style
-import json
 
 style.use('ggplot')
 import numpy as np
-import random
-
-# _nbits[k] is the number of 1s in the binary representation of k for 0 <= k < 256.
-_nbits = np.array(
-      [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3, 3,
-       4, 2, 3, 3, 4, 3, 4, 4, 5, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4,
-       4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 1, 2, 2, 3, 2,
-       3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5,
-       4, 5, 5, 6, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4,
-       5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3,
-       3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 2,
-       3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6,
-       4, 5, 5, 6, 5, 6, 6, 7, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5,
-       6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 3, 4, 4, 5, 4, 5,
-       5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6,
-       7, 7, 8], dtype=np.uint8)
-
-
-def hamming(a, b):
-    """
-    Compute a hamming distance between descriptors a and b
-    Use a bitwise or on the whole array of bytes.
-    Next, _nbits is a precomputed array that stores the number of bits on each 1-byte result.
-
-    Example:
-        The number 13 is represented by 00001101.
-        Likewise, 17 is represented by 00010001.
-        The bit-wise XOR of 13 and 17 is therefore 00011100, or 28:
-
-        >>> np.bitwise_xor(13, 17)
-            28
-        >>> np.binary_repr(28)
-            '11100'
-
-    Using bitwise_xor to compoute the operation. For example, given two arrays
-    >>> np.bitwise_xor([31, 3, 67, 78], [5, 6, 90, 255])
-    array([ 26,   5,  25, 177])
-
-    :param a: a binary descriptor.
-    :param b:
-    :return:
-    """
-    # a = np.uint8(a)
-    # b = np.uint8(b)
-    c = np.bitwise_xor(a, b)
-    n = _nbits[c].sum()
-    return n
+from cluster.distance_functions import compute_distance_function, find_closest
 
 
 class KMeans():
@@ -274,7 +225,6 @@ class KMeans():
         self.update_centroids(data)
         # compute the total cost of the current assigment based on the previous distances
         cost = np.sum(self.distances)
-        # cost = np.average(self.distances)
         return cost
 
     def predict(self, data):
@@ -291,13 +241,13 @@ class KMeans():
         """
         distance_mat = []
         N = len(data)
-        labels = -1*np.ones(N, dtype=np.int16)
+        labels = -1*np.ones(N, dtype=np.uint32)
         # find the distances of all datapoints to each cluster k
         # for each cluster, the operation computes the distance to all datapoints
         for k in range(self.k):
             centroid_k = self.centroids[k]
             # distances of all datapoints to centroid k
-            d = self.compute_distance_function(data, centroid_k)
+            d = compute_distance_function(data, centroid_k, self.distance_function)
             distance_mat.append(d)
         distance_mat = np.array(distance_mat)
         datapoint_distances = np.zeros(N)
@@ -361,53 +311,8 @@ class KMeans():
             # this makes sense for binary descriptors and avoids having descriptors that do not represent any
             # existing element in the dataset.
             for k in range(0, self.k):
-                data_k = self.find_closest(data, self.centroids[k])
+                data_k = find_closest(data, self.centroids[k], self.distance_function)
                 self.centroids[k] = data_k
-
-    def find_closest(self, data, centroid_k):
-        """
-        Find the closest sample of data to the centroid
-        :param data:
-        :return:
-        """
-        # distances of all datapoints to centroid k
-        d = self.compute_distance_function(data, centroid_k)
-        k_i = np.where(d == np.amin(d))
-        index = k_i[0][0]
-        return data[index, :]
-
-    def compute_distance_function(self, data, centroid):
-        """
-        Compute distance between all data and a given centroid.
-        In the euclidean distance, np.linalg.norm allows to compute the distance of all data to a centroid by computing
-        a difference and then computing the L2-norm.
-        In the case of the Hamming distance, the np.bitwise_xor has to be called for each descriptor independently, thus
-        slowing down
-        """
-        if self.distance_function == 'euclidean':
-            # returns an array of 1 x N, where N is the number of datapoints in data
-            d = np.linalg.norm(data - centroid, axis=1)
-            return d
-        elif self.distance_function == 'hamming':
-            # iterate along samples to compute the hamming distance
-            d = self.compute_hamming_distances(data, centroid)
-            return d
-
-    def compute_hamming_distances(self, data, centroid):
-        distances = -1 * np.ones(self.N, dtype=np.uint8)
-        try:
-            assert (data.dtype == np.uint8)
-            assert (centroid.dtype == np.uint8)
-        except AssertionError:
-            print("Please use binary data (numpy.uint8) if Hamming distance is used.")
-            print("Alternatively, use mean-round as averaging method is used.")
-            print("Exiting")
-            exit()
-        # compute hamming distance for all descriptors in the dataset to the given centroid
-        for i in range(self.N):
-            sample = data[i]
-            distances[i] = hamming(sample, centroid)
-        return distances
 
     def kmeanspp_init(self, data):
         # store the desired number of clusters to be initialized
@@ -418,8 +323,7 @@ class KMeans():
         index = np.random.randint(self.N, size=1)
         self.centroids[0] = data[index[0]]
         for k in range(1, K):
-            # the self.k must be set, since we are initializing and have not set the
-            # total number of desired clusters.
+            # the self.k must be set, since we are initializing and have not set the total number of desired clusters.
             self.k = k
             self.centroids[k] = self.kmeanspp_select_new_centroid(data)
         self.k = K

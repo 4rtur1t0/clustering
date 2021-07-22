@@ -53,24 +53,6 @@ def flatten_list(all_descriptors):
     return ret_descriptors
 
 
-# def convert_to_bin(data):
-#     print("Converting to long binary descriptors")
-#     # data_bin = []
-#     data_bin = np.unpackbits(data, axis=1)
-#     # for datapoint in data:
-#     #     datapoint_bin = np.array([])
-#     #
-#     #     # converts every feature in the ORB descriptor from int to an 8-bits binary representation
-#     #     for feature in datapoint:
-#     #         d = np.binary_repr(feature, width=8)
-#     #         d = d.replace("", " ")[1: -1]
-#     #         d_bin = np.fromstring(d, dtype=np.uint8, sep=' ')
-#     #         datapoint_bin = np.append(datapoint_bin, d_bin)
-#     #     data_bin.append(datapoint_bin)
-#     # data_bin = np.array(data_bin, dtype=np.uint8)
-#     print("End conversion")
-#     return data_bin
-
 
 def load_data(sampling=None, max_index=None):
     all_descriptors = read_descriptors('data/descriptors.json')
@@ -119,16 +101,3 @@ if __name__ == '__main__':
     # classify and plot
     clf.plot(X, 'Final result!')
 
-
-
-    # clf.plot(X, 'Final result!')
-
-    # distance_mat = np.zeros((20, 20))
-    # for i in range(n_clusters):
-    #     for j in range(n_clusters):
-    #         centroid_i = clf.centroids[i]
-    #         centroid_j = clf.centroids[j]
-    #         d = np.linalg.norm(centroid_i-centroid_j)
-    #         distance_mat[i, j] = d
-
-    # print(distance_mat)

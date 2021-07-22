@@ -9,8 +9,8 @@ The total depth of the tree is Lw. Each node implements a kmeans algorithm on it
 
 """
 from itertools import cycle
-
 import numpy as np
+import json
 import time
 from cluster.hkmeans import HKMeans
 import matplotlib.pyplot as plt
@@ -45,35 +45,37 @@ def plot_result(X, y, centroids):
         cluster_data = (y == k)
         plt.scatter(X[cluster_data, 0], X[cluster_data, 1], c=next(colors), marker='.', s=20)
         plt.scatter(centroids[k][0], centroids[k][1], c='k', marker='.', s=200)
-    plt.title("Data clustered")
+    plt.title("RESULT! Data clustered")
     plt.show()
     return X, y
 
 
 if __name__ == '__main__':
-    n_samples = 5000
-    centers = 5
-    kw = 2
-    lw = 1
+    n_samples = 3000
+    centers = 3
+    kw = 3
+    lw = 2
     X, y = generate_data(n_samples=n_samples, centers=centers)
 
-    kmeans_params = {'tol': 0.001, 'max_iter': 500,
-                   'distance_function': 'euclidean',
-                   'centroid_replacement': False,
-                   'init_method': 'kmeans++',
-                   'plot_progress': True}
-
+    kmeans_params = {'tol': 0.001,
+                     'max_iter': 500,
+                     'distance_function': 'euclidean',
+                     'centroid_replacement': False,
+                     'averaging_function': 'mean', #
+                     'init_method': 'kmeans++',
+                     'plot_progress': True}
+    start_time = time.time()
     hk = HKMeans(kw=kw, lw=lw, kmeans_params=kmeans_params)
     hk.print_tree()
-
-    start_time = time.time()
     hk.fit(X)
     elapsed_time = time.time() - start_time
     hk.print_tree()
     hk.print_words()
+    hk.plot_tree_data(X)
 
+    # use a brute force prediction: use the closest distance to each datapoint
+    new_labels, _ = hk.predict_brute_force(X)
 
-    # hk.plot_tree_data(X)
     print("Clustering data with size: ", len(X))
     print('Trained a tree with (kw, lw): ', kw, ', ', lw)
     print('Total number of nodes: ', hk.get_number_of_nodes())
@@ -81,14 +83,11 @@ if __name__ == '__main__':
     print('Total number of words expected: ', hk.get_expected_number_of_words())
     print('Total number of words found: ', hk.count_number_of_words())
     print('Total cost of fit (at last hierarchy level): ', hk.get_total_cost())
-    print('Mean and variance in the number of datapoints per leaf: ', hk.get_n_datapoints_per_leaf_distribution())
-    print('Mean and variance in the number of datapoints per Word: ', hk.get_n_datapoints_per_word_distribution())
+    print('Number of datapoints per leaf (WORD): ', hk.get_n_datapoints_per_word())
     print('Fit time: ', elapsed_time, '(s)')
-    print("Silhouette Coefficient: %0.3f" % silhouette_score(X, hk.labels, sample_size=1000))
-    plot_result(X, hk.labels, hk.centroids)
-
-    # predict the same data
-    new_labels = hk.predict(X)
+    # print("Sum of errors in classification (a small number is due to the approximation of the top-down classification): ", np.sum(np.abs(hk.leaf_labels - new_labels)))
+    # print("Silhouette Coefficient: %0.3f" % silhouette_score(X, hk.leaf_labels, sample_size=n_samples))
+    print("Silhouette Coefficient of tree classification: %0.3f" % silhouette_score(X, new_labels, sample_size=n_samples))
 
 
 
