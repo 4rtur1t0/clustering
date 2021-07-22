@@ -225,7 +225,7 @@ class HKMeans():
                 node.kmeans.predict(data)
                 # the key is to propagate indexes
                 node.propagate_indexes()
-        # TODO: MUST RETURN
+        # TODO: MUST RETURN labels of data
         return labels, distances
 
 
