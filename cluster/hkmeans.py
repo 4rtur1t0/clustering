@@ -26,8 +26,8 @@ class Node():
         self.cost = None
         self.kmeans = None
 
-    def init_indexes(self, data):
-        self.indexes = np.arange(0, len(data))
+    def init_indexes(self, len_data):
+        self.indexes = np.arange(0, len_data)
 
     def add_child(self, obj):
         """
@@ -48,36 +48,36 @@ class Node():
         return self.children
 
     def get_n_datapoints(self):
-        return len(self.indexes)
+        try:
+            return len(self.indexes)
+        except:
+            return 0
 
-    def plot_data(self, data, color):
+    def plot_data(self, data):
         # if no data is assigned to this node --> skip
         if self.indexes is None:
             return
-        # plt.figure(1)
         X = data[self.indexes]
-        for k in range(self.n_clusters):
-            # col = colors[k]
+        colors = ['r', 'g', 'b', 'k', 'c', 'm', 'y']
+        iterator = cycle(colors)
+        n_clusters = len(self.centroids)
+        for k in range(n_clusters):
             cluster_data = (self.labels == k)
-            plt.scatter(X[cluster_data, 0], X[cluster_data, 1], c=color, marker='.', s=20)
+            plt.scatter(X[cluster_data, 0], X[cluster_data, 1], c=next(iterator), marker='.', s=20)
             plt.scatter(self.centroids[k][0], self.centroids[k][1], c='k', marker='.', s=150)
-        # plt.title("Data clustered at level" + str(level))
-        # plt.show()
 
     def fit(self, data):
         # in this case, data has not been propagated to this node and no clustering needs to be performed
         # the node is not deleted
         if self.indexes is None:
             return
+        if self.node_type == 'leaf':
+            return
         # obtain the data that corresponds to the current node
         data = data[self.indexes]
         # check whether there are more clusters than data. In this case the clustering makes no sense and all datapoints
         # are selected as centroid with n_clusters = len(data)
         print('Clustering len(data)', len(data))
-        if self.n_clusters > len(data):
-            print('WARNING: cannot find more clusters than number of data.')
-            print('WARNING: setting all datapoints as clusters.')
-            self.n_clusters = len(data)
         km = KMeans(k=self.n_clusters,
                     tol=self.kmeans_params.get('tol', 0.001),
                     max_iter=self.kmeans_params.get('max_iter', 300),
@@ -86,7 +86,7 @@ class Node():
                     averaging_function=self.kmeans_params.get('averaging_function', None),
                     init_method=self.kmeans_params.get('init_method', 'kmeans++'),
                     plot_progress=self.kmeans_params.get('plot_progress'))
-        # fit current node with the data given
+        # fit current node with the given data
         km.fit(data)
         self.kmeans = km
         self.centroids = km.centroids
@@ -98,14 +98,54 @@ class Node():
         # no subsequent clustering is performed for these Nodes
         self.propagate_indexes()
 
+    def predict(self, data):
+        # in this case, data has not been propagated to this node and no clustering needs to be performed
+        # the node is not deleted
+        if self.indexes is None:
+            return
+        if self.node_type == 'leaf':
+            return
+        # obtain the data that corresponds to the current node
+        data = data[self.indexes]
+        labels, _ = self.kmeans.predict(data)
+        self.labels = labels
+        # once clustered, propagate the data_indexes to this node's children
+        # there are kw children of this node
+        # caution, in the case where n_clusters is less than kw, some of the children nodes will not have data assigned
+        # no subsequent clustering is performed for these Nodes
+        self.propagate_indexes()
+
     def propagate_indexes(self):
+        """
+        For each of the node, obtain their children and associate its corresponding data.
+
+        Important: the stop condition for clustering is implemented here. in particular we require
+        min_n_datapoints datapoints for cluster. If the datapoints assigned to any children is n_datapoints_k, then
+        n_datapoints_k should be greater than k*min_n_datapoints. The stop condition is assigned by marking the node as
+        leaf. The children belonging to a leaf are not removed, however their data indexes are None.
+        """
         # if this is a leaf node, then finish, do not propagate indexes below
         if self.node_type == 'leaf':
             return
-
+        # propagate the data indexes for each of the clusters
         for k in range(self.n_clusters):
+            # print('Propagating node', self.id)
+            # print('Propagating cluster', k)
+            # print('Data indexes: ', self.indexes)
+            # print('Data labels: ', self.labels)
+
             tf_indexes = (self.labels == k)
             self.children[k].indexes = self.indexes[tf_indexes]
+            # propagate current centroid to the leaf node
+            self.children[k].centroids[0] = self.centroids[k]
+            # compute if children k is a leaf or may be subsequently clustered
+            n_req_datapoints = self.n_clusters * 5
+            n_datapoints_k = len(self.children[k].indexes)
+            # if the condition is not met, then mark the node as leaf-node
+            # as a result
+            if n_datapoints_k < n_req_datapoints:
+                self.children[k].node_type = 'leaf'
+
 
 
 class HKMeans():
@@ -120,7 +160,7 @@ class HKMeans():
         self.parent = None
         self.tree = {}
         self.leaf_centroids = None
-        # self.leaf_labels = None
+        self.leaf_centroids_id = None
         self.kmeans_params = kmeans_params
         self.create_tree()
 
@@ -161,7 +201,7 @@ class HKMeans():
         """
         # init indexes at root. The root node possesses all indexes of the whole dataset
         root = self.tree[0][0]
-        root.init_indexes(data)
+        root.init_indexes(len(data))
         # cluster the top levels. The last level (the leafs) receive the clustered indexes from the previous level.
         for level in range(self.Lw):
             print('Processing tree level: ', level, ' out of', self.Lw)
@@ -169,7 +209,7 @@ class HKMeans():
             # cluster each of the nodes at this tree level
             for node in nodes:
                 node.fit(data)
-        # self.save_leaf_labels(data)
+        # run accross the tree and save all centroids/words to the variable self.leaf_centroids
         self.save_centroids()
         print('Finished!')
 
@@ -193,41 +233,58 @@ class HKMeans():
         predict works in a top down fashion. Starts at the top node and works down.
         This reduces the number of comparisons that need to be performed, however, the results are approximate.
         """
-        labels = -1*np.ones(len(data), dtype=int)
-        distances = np.zeros(len(data))
-        for i in range(len(data)):
-            # for every data start at the tree top and go down
-            node = self.tree[0][0]
-            while True:
-                # print('Predict')
-                label, distance = node.kmeans.predict(data[i])
-                # switch to node below, according to the prediction
-                node = node.children[label[0]]
-                if node.kmeans is None:
-                    labels[i] = node.leaf_id
-                    distances[i] = distance[0]
-                    break
-        return labels, distances
-
-    def predict_top_down_bis(self, data):
-        """
-        Returns the label of the closest centroid of the leaves.
-        predict works in a top down fashion. Starts at the top node and works down.
-        This reduces the number of comparisons that need to be performed, however, the results are approximate.
-        """
-        labels = -1*np.ones(len(data), dtype=int)
-        distances = np.zeros(len(data))
-
+        # reset indexes
         for i in range(self.Lw):
             # for every data start at the tree top and go down
             nodes = self.tree[i]
             for node in nodes:
-                node.kmeans.predict(data)
-                # the key is to propagate indexes
-                node.propagate_indexes()
-        # TODO: MUST RETURN labels of data
-        return labels, distances
+                node.indexes = None
+        root = self.tree[0][0]
+        root.init_indexes(len(data))
+        # predict data top down
+        labels = -1*np.ones(len(data), dtype=np.int32)
+        # distances = np.zeros(len(data))
+        for i in range(self.Lw):
+            # for every data start at the tree top and go down
+            nodes = self.tree[i]
+            for node in nodes:
+                print('Kmeans: ', node.kmeans)
+                node.predict(data)
 
+        # Look for all leaf nodes and get the corresponding indexes
+        leaf_node_list = []
+        for i in range(self.Lw+1):
+            nodes = self.tree[i]
+            for node in nodes:
+                if node.node_type == 'leaf':
+                    leaf_node_list.append(node)
+
+        i = 0
+        for node in leaf_node_list:
+            # these correspond to the data indexes that corresond to this node
+            indexes = node.indexes
+            if indexes is None:
+                continue
+            # these indexes correspond to the current node
+            labels[indexes] = i
+            i += 1
+
+        # # IMPORTANT: NO NEED TO RECOMPUTE THE LAST LEVEL OF LEAVES, SINCE THEY HAVE BEEN PROPAGATED FROM THE PREVIOUS LEVEL
+        # nodes = self.tree[self.Lw]
+        # # return the labels. Use nodes, since they correspond to the leaves
+        # # please beware that each leaf node has node.labels = None
+        # i = 0
+        # for node in nodes:
+        #     # these correspond to the data indexes that corresond to this node
+        #     indexes = node.indexes
+        #     # these indexes correspond to the current node
+        #     labels[indexes] = i
+        #     i += 1
+        print('Looking for unassigned labels')
+        if np.sum(labels < 0) > 0:
+            print("Error!!!")
+        print("Set of labels assigned: ", set(labels))
+        return labels #, distances
 
     def predict_brute_force(self, data):
         """
@@ -251,24 +308,10 @@ class HKMeans():
             col = distance_mat[:, i]
             min_dist = np.amin(col)
             k_i = np.where(col == min_dist)
-            labels[i] = k_i[0][0]
+            k_i = k_i[0][0]
+            labels[i] = self.leaf_centroids_id[k_i]
             datapoint_distances[i] = min_dist
         return labels, datapoint_distances
-
-    # def replace_centroids(self, data):
-    #     """
-    #     For each centroid in the data, look for the closest datapoint and replace it.
-    #     Also reassign all datapoints to the new centroids!
-    #     """
-    #     nodes = self.tree[self.Lw-1]
-    #     for node in nodes:
-    #         node.kmeans.centroid_replacement = True
-    #         node.kmeans.update_centroids(data)
-    #         node.labels, _ = node.predict(data, option='bruteforce')
-    #         node.propagate_indexes()
-    #     self.save_leaf_labels(data)
-    #     self.save_centroids()
-
 
     def print_tree(self):
         for level in range(self.Lw+1):
@@ -276,8 +319,8 @@ class HKMeans():
             print(30*"_")
             for node in nodes:
                 try:
-                    print(node.id, '  (', node.node_type, ')  ', end='')
-                    print('(', node.get_n_datapoints(), ') ', end='')
+                    print('| ID: ', node.id, ', ', node.node_type, '', end='')
+                    print('( n_dp: ', node.get_n_datapoints(), ') ', end='')
                 except TypeError:
                     continue
             print()
@@ -311,27 +354,41 @@ class HKMeans():
             self.leaf_labels[node_leaf.indexes] = current_label
 
     def save_centroids(self):
-        # nodes at the upper level
-        pre_node_leaves = self.tree[self.Lw-1]
+        print('Saving centroids to self.leaf_centroids')
         centroids = []
-        for node_leaf in pre_node_leaves:
-            n_centroids = len(node_leaf.centroids)
-            for k in range(n_centroids):
-                centroids.append(node_leaf.centroids[k])
+        ids = []
+        i = 0
+        for lw in range(self.Lw+1):
+            nodes = self.tree[lw]
+            for node in nodes:
+                if node.node_type == 'leaf':
+                    try:
+                        print('Node ID: ', node.id)
+                        print('node.centroids[0]', node.centroids[0])
+                        centroids.append(node.centroids[0])
+                        # ids.append(int(node.id))
+                        ids.append(i)
+                    except KeyError:
+                        print('Leaf node without centroid, ok')
+                        continue
         self.leaf_centroids = np.array(centroids)
+        self.leaf_centroids_id = np.array(ids)
+
+        # pre_node_leaves = self.tree[self.Lw-1]
+        # centroids = []
+        # for node_leaf in pre_node_leaves:
+        #     n_centroids = len(node_leaf.centroids)
+        #     for k in range(n_centroids):
+        #         centroids.append(node_leaf.centroids[k])
+        # self.leaf_centroids = np.array(centroids)
 
     def plot_tree_data(self, X):
-        colors = ['r', 'g', 'b', 'k', 'c', 'm', 'y']
-        iterator = cycle(colors)
         for level in range(self.Lw):
             plt.figure(level)
             nodes = self.tree[level]
             for node in nodes:
-                node.plot_data(X, color=next(iterator))
+                node.plot_data(X)
             plt.title('Tree at level ' + str(level))
-        # finally plot the words
-        # for k in range(len(self.leaf_centroids)):
-        #     plt.scatter(self.leaf_centroids[k, 0], self.leaf_centroids[k, 1], c='b', marker='o', s=80)
         plt.show()
 
     def get_number_of_nodes(self):
@@ -353,27 +410,50 @@ class HKMeans():
 
     def get_n_datapoints_per_word(self):
         """
-        Get the number of datapoints associated to each of the words.
+        Get the number of datapoints associated to each of the words/leafs.
         """
-        words = self.tree[self.Lw]
         datapoints = []
-        for word in words:
-            try:
-                datapoints.append(len(word.indexes))
-            except:
-                datapoints.append(0)
+        for i in range(self.Lw+1):
+            nodes = self.tree[i]
+            for node in nodes:
+                if node.node_type == 'leaf':
+                    try:
+                        datapoints.append(len(node.indexes))
+                    except TypeError:
+                        continue
+
+        # words = self.tree[self.Lw]
+        # datapoints = []
+        # for word in words:
+        #     try:
+        #         datapoints.append(len(word.indexes))
+        #     except:
+        #         datapoints.append(0)
 
         datapoints = np.array(datapoints)
         return datapoints
 
     def get_total_cost(self):
-        leaves = self.tree[self.Lw - 1]
+        """
+        Get the cost of the leaf nodes
+        """
         cost = 0
-        for leaf in leaves:
-            if leaf.cost is None:
-                continue
-            cost += leaf.cost
+        # get leaf nodes and compute the
+        for i in range(self.Lw):
+            nodes = self.tree[i]
+            for node in nodes:
+                if node.cost is None:
+                    continue
+                cost += node.cost
         return cost
+        #
+        # leaves = self.tree[self.Lw - 1]
+        # cost = 0
+        # for leaf in leaves:
+        #     if leaf.cost is None:
+        #         continue
+        #     cost += leaf.cost
+        # return cost
 
     def create_vocabulary(self):
         """

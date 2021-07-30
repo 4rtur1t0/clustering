@@ -107,7 +107,6 @@ https://medium.datadriveninvestor.com/unsupervised-learning-with-python-k-means-
 """
 import matplotlib.pyplot as plt
 from matplotlib import style
-
 style.use('ggplot')
 import numpy as np
 from cluster.distance_functions import compute_distance_function, find_closest

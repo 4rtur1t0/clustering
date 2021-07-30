@@ -5,11 +5,13 @@ import json
 from itertools import cycle
 import numpy as np
 import time
+
+from sklearn.manifold import Isomap, SpectralEmbedding, TSNE
 from sklearn.metrics import silhouette_score
 from cluster.hkmeans import HKMeans
 import matplotlib.pyplot as plt
-from sklearn.decomposition import PCA, SparsePCA
-
+# from sklearn.decomposition import PCA, SparsePCA
+from cluster.distance_functions import hamming
 
 def read_descriptors(path):
     descriptors_input_path = path # + '/mav0/descriptors.json'
@@ -34,17 +36,123 @@ def flatten_list(all_descriptors):
     return ret_descriptors
 
 
-def plot_result(X, y, centroids):
+# def plot_result(X, y, centroids):
+#     # Plot init seeds along side sample data
+#     plt.figure()
+#     colors = cycle(['r', 'g', 'b', 'k', 'c', 'm', 'y'])
+#     for k in set(y):
+#         cluster_data = (y == k)
+#         plt.scatter(X[cluster_data, 0], X[cluster_data, 1], c=next(colors), marker='.', s=50)
+#         # plt.scatter(centroids[k][0], centroids[k][1], c='k', marker='.', s=200)
+#     plt.title("RESULT! Data clustered")
+#     plt.show()
+#     return
+
+def plot_results_projecting(X, y, centroids):
+    from cluster.distance_functions import compute_hamming_distances
     # Plot init seeds along side sample data
-    plt.figure(1)
+    plt.figure()
     colors = cycle(['r', 'g', 'b', 'k', 'c', 'm', 'y'])
+    on = np.unpackbits(np.array([255, 255, 255, 255, 255, 255, 255, 255,
+                                 255, 255, 255, 255, 255, 255, 255, 255,
+                                 255, 255, 255, 255, 255, 255, 255, 255,
+                                 255, 255, 255, 255, 255, 255, 255, 255], dtype=np.uint8))
+    off = np.unpackbits(np.array([0, 0, 0, 0, 0, 0, 0, 0,
+                                  0, 0, 0, 0, 0, 0, 0, 0,
+                                  0, 0, 0, 0, 0, 0, 0, 0,
+                                  0, 0, 0, 0, 0, 0, 0, 0], dtype=np.uint8))
     for k in set(y):
         cluster_data = (y == k)
-        plt.scatter(X[cluster_data, 0], X[cluster_data, 1], c=next(colors), marker='.', s=50)
+        # project all data of that cluster to to two dimensions, using two hamming distances.
+        # d1 is the distance to [0  0 00 0 ]
+        # d2 is the distance to [11111]
+        d1 = compute_hamming_distances(X[cluster_data], on)
+        d2 = compute_hamming_distances(X[cluster_data], off)
+        # plt.scatter(X[cluster_data, 0], X[cluster_data, 1], c=next(colors), marker='.', s=50)
+        plt.scatter(d1, d2, c=next(colors), marker='.', s=50)
+        d1c = hamming(centroids[k], on)
+        d2c = hamming(centroids[k], off)
         # plt.scatter(centroids[k][0], centroids[k][1], c='k', marker='.', s=200)
+        plt.scatter(d1c, d2c, c=next(colors), marker='*', s=50)
+        plt.annotate(str(k), (d1c, d2c))
+
     plt.title("RESULT! Data clustered")
     plt.show()
-    return X, y
+    return
+
+
+def plot_results_isomap(X, y, centroids):
+    embedding = Isomap(n_components=2, metric='manhattan', p=1)
+    X_red = embedding.fit_transform(X)
+    plot_results(X_red, y, title='RESULT! Data clustered. Using ISOMAP CLUSTERING TO VISUALIZE')
+
+    # centroids_red = embedding.transform(centroids)
+    # colors = cycle(['r', 'g', 'b', 'k', 'c', 'm', 'y'])
+    #
+    # for k in set(y):
+    #     cluster_data = (y == k)
+    #     plt.scatter(X_red[cluster_data, 0], X_red[cluster_data, 1], c=next(colors), marker='.', s=50)
+    #     plt.scatter(centroids_red[k][0], centroids_red[k][1], c='k', marker='.', s=200)
+    # plt.title("RESULT! Data clustered. Using ISOMAP TO VISUALIZE")
+    # plt.show()
+
+
+def plot_results_spectral(X, y, centroids):
+    embedding = SpectralEmbedding(n_components=2)
+    X_red = embedding.fit_transform(X)
+    plot_results(X_red, y, title='RESULT! Data clustered. Using SPECTRAL CLUSTERING TO VISUALIZE')
+
+    #
+    # # centroids_red = embedding.transform(centroids)
+    # colors = cycle(['r', 'g', 'b', 'k', 'c', 'm', 'y'])
+    #
+    # for k in set(y):
+    #     cluster_data = (y == k)
+    #     plt.scatter(X_red[cluster_data, 0], X_red[cluster_data, 1], c=next(colors), marker='.', s=50)
+    #     # plt.scatter(centroids_red[k][0], centroids_red[k][1], c='k', marker='.', s=200)
+    # plt.title("RESULT! Data clustered. Using SPECTRAL CLUSTERING TO VISUALIZE")
+    # plt.show()
+
+def plot_results_TSNE(X, y, centroids):
+    embedding = TSNE(n_components=2,
+                     init='pca',
+                     perplexity=500)
+    X_red = embedding.fit_transform(X)
+    plot_results(X_red, y, title='RESULT! Data clustered. Using tsne TO VISUALIZE')
+
+
+
+def plot_results(X, y, title):
+    colors = cycle(['r', 'g', 'b', 'k', 'c', 'm', 'y'])
+    markers = cycle(['.', '+', 'o', '*', '1', 'p', 's', 'x', 'X'])
+    strs = []
+    i = 0
+    for k in set(y):
+        cluster_data = (y == k)
+        color = next(colors)
+        marker = next(markers)
+        plt.scatter(X[cluster_data, 0], X[cluster_data, 1], c=color, marker=marker, s=50)
+        # plt.scatter(centroids_red[k][0], centroids_red[k][1], c='k', marker='.', s=200)
+        strs.append(str(i))
+        i += 1
+    plt.legend(strs)
+    plt.title(title)
+    plt.show()
+
+
+def precompute_distances(X, labels, output_size_ratio):
+    idx = np.random.choice(len(X), int(len(X)*output_size_ratio), replace=False)
+    X = X[idx]
+    labels = labels[idx]
+    # create a square distance matrix
+    D = np.zeros((len(X), len(X)))
+    for i in range(len(X)):
+        for j in range(len(X)):
+            a = X[i, :]
+            b = X[j, :]
+            d = hamming(a, b)
+            D[i, j] = d
+    return D, labels
 
 
 def load_data(sampling=None, max_index=None):
@@ -72,16 +180,17 @@ def save_bow_vectors(bow_vector, words, n_words, filename='bagofwords.json'):
 
 if __name__ == '__main__':
     n_samples = 5000
-    kw = 3
-    lw = 2
+    kw = 2
+    lw = 9
     # load ORB DESCRIPTORS
     X = load_data(sampling=1, max_index=n_samples)
+    # transform to binary descriptors (length is 256 bits)
     X = np.unpackbits(X, axis=1)
 
     kmeans_params = {'tol': 0.001,
                      'max_iter': 300,
                      'distance_function': 'hamming',
-                     'centroid_replacement': True,
+                     'centroid_replacement': False,
                      'averaging_function': 'mean-round', # this is majority voting for binary descriptors if unpacked
                      'init_method': 'kmeans++',
                      'plot_progress': True}
@@ -97,17 +206,17 @@ if __name__ == '__main__':
 
     print('Finding predictions via brute-force:')
     start_time = time.time()
-    new_labels, _ = hk.predict_brute_force(X)
+    new_labels1, _ = hk.predict_brute_force(X)
     elapsed_time = time.time() - start_time
     print('Took: ', elapsed_time, '(s)')
-    print('Done predicting brute Force. found: ', len(set(new_labels)), ' different labels')
+    print('Done predicting brute Force. found: ', len(set(new_labels1)), ' different labels')
 
     print('Finding predictions via top-down:')
     start_time = time.time()
-    new_labels, _ = hk.predict_top_down(X)
+    new_labels2, _ = hk.predict_top_down(X)
     elapsed_time = time.time() - start_time
     print('Took: ', elapsed_time)
-    print('Done predicting top down. found: ', len(set(new_labels)), ' different labels')
+    print('Done predicting top down. found: ', len(set(new_labels2)), ' different labels')
 
     print("Clustered ", len(X), " n descriptors")
     print('Trained a tree with (kw, lw): ', kw, ', ', lw)
@@ -118,14 +227,22 @@ if __name__ == '__main__':
     print('Total cost of fit (at last hierarchy level): ', hk.get_total_cost())
     print('Number of datapoints per leaf (WORD): ', hk.get_n_datapoints_per_word())
     print('Fit time: ', elapsed_time, '(s)')
-    # print("Sum of errors in classification (a small number is due to the approximation of the top-down classification): ", np.sum(np.abs(hk.leaf_labels - new_labels)))
-    # print("Silhouette Coefficient: %0.3f" % silhouette_score(X, hk.leaf_labels, sample_size=n_samples))
-    print("Silhouette Coefficient of tree classification: %0.3f" % silhouette_score(X, new_labels, sample_size=n_samples))
+    # use 10 percent of the smaples
+    # precompute distance matrix using hamming distance
+    D, sampled_labels = precompute_distances(X, new_labels2, .1)
+    # sil_score = silhouette_score(X, new_labels, sample_size=n_samples)
+    # using precomputed distance
+    sil_score = silhouette_score(D, sampled_labels, sample_size=n_samples, metric='precomputed')
+    print("Silhouette Coefficient of tree classification: ", sil_score)
 
 
     # Xred = SparsePCA(n_components=2).fit_transform(X)
+    # plot_results_projecting(X, new_labels2, hk.leaf_centroids)
+    plot_results_isomap(X, new_labels1, hk.leaf_centroids)
+    plot_results_spectral(X, new_labels1, hk.leaf_centroids)
+    plot_results_TSNE(X, new_labels1, hk.leaf_centroids)
 
-    # plot_result(Xred, new_labels, hk.leaf_centroids)
+
 
     print('Creating vocabulary object!')
     # create the vocabulary!!!
