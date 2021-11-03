@@ -195,7 +195,7 @@ class KMeans():
         :return:
         """
         self.N = len(data)
-        # init centroids according to selected method
+        # init centroids according to selected method: kmeans++, or random
         self.cluster_init(data)
         # perform max iterations of the algorithm
         for i in range(self.max_iter):
@@ -314,10 +314,14 @@ class KMeans():
                 self.centroids[k] = data_k
 
     def kmeanspp_init(self, data):
+        """
+        Initialize the k initial centroids using the kmeans++ algorithm.
+        """
         # store the desired number of clusters to be initialized
         K = self.k
-        print('kmeanspp_init. N', self.N)
-        print('kmeanspp_init. k', self.k)
+        if self.plot_progress:
+            print('kmeanspp_init. N', self.N)
+            print('kmeanspp_init. k', self.k)
         # select first cluster at random
         index = np.random.randint(self.N, size=1)
         self.centroids[0] = data[index[0]]

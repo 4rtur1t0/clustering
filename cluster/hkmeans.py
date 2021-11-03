@@ -7,7 +7,7 @@ import numpy as np
 from cluster.kmeans import KMeans
 import matplotlib.pyplot as plt
 from cluster.distance_functions import compute_distance_function
-from cluster.vocabulary import Vocabulary
+from cluster.vocabulary import VocabularyTree
 
 
 class Node():

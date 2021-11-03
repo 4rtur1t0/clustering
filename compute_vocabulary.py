@@ -1,266 +1,111 @@
 """
 LAST VERSION TO COMPUTE BAG OF WORDS
+
+
+https://towardsdatascience.com/natural-language-processing-feature-engineering-using-tf-idf-e8b9d00e7e76
+
+https://betterprogramming.pub/a-friendly-guide-to-nlp-tf-idf-with-python-example-5fcb26286a33
+
+https://www.freecodecamp.org/news/how-to-process-textual-data-using-tf-idf-in-python-cd2bbc0a94a3/
+
 """
-import json
-from itertools import cycle
+# import json
 import numpy as np
 import time
-
-from sklearn.manifold import Isomap, SpectralEmbedding, TSNE
-from sklearn.metrics import silhouette_score
-from cluster.hkmeans import HKMeans
-import matplotlib.pyplot as plt
-# from sklearn.decomposition import PCA, SparsePCA
-from cluster.distance_functions import hamming
-
-def read_descriptors(path):
-    descriptors_input_path = path # + '/mav0/descriptors.json'
-    with open(descriptors_input_path, 'r') as json_file:
-        data = json.load(json_file)
-        desc1 = data['descriptors_front']
-        desc2 = data['descriptors_back']
-        # extend list 1
-        desc1.extend(desc2)
-        return desc1
+from cluster.hierarchical_clustering import HierarchicalClustering
+# import matplotlib.pyplot as plt
+# from cluster.distance_functions import hamming
+from cluster.load_data import load_ORB_data, flatten_and_sampling
+#import pickle
+from config import EXPERIMENT_CONFIG
 
 
-def flatten_list(all_descriptors):
-    """
-    Flattens list of descriptors: original list is of size
-        n_landmarks list with [1500 x 32] in each
-    """
-    ret_descriptors = []
-    for descriptors_image in all_descriptors:
-        for desc in descriptors_image:
-            ret_descriptors.append(desc)
-    return ret_descriptors
-
-
-# def plot_result(X, y, centroids):
-#     # Plot init seeds along side sample data
-#     plt.figure()
-#     colors = cycle(['r', 'g', 'b', 'k', 'c', 'm', 'y'])
-#     for k in set(y):
-#         cluster_data = (y == k)
-#         plt.scatter(X[cluster_data, 0], X[cluster_data, 1], c=next(colors), marker='.', s=50)
-#         # plt.scatter(centroids[k][0], centroids[k][1], c='k', marker='.', s=200)
-#     plt.title("RESULT! Data clustered")
-#     plt.show()
-#     return
-
-def plot_results_projecting(X, y, centroids):
-    from cluster.distance_functions import compute_hamming_distances
-    # Plot init seeds along side sample data
-    plt.figure()
-    colors = cycle(['r', 'g', 'b', 'k', 'c', 'm', 'y'])
-    on = np.unpackbits(np.array([255, 255, 255, 255, 255, 255, 255, 255,
-                                 255, 255, 255, 255, 255, 255, 255, 255,
-                                 255, 255, 255, 255, 255, 255, 255, 255,
-                                 255, 255, 255, 255, 255, 255, 255, 255], dtype=np.uint8))
-    off = np.unpackbits(np.array([0, 0, 0, 0, 0, 0, 0, 0,
-                                  0, 0, 0, 0, 0, 0, 0, 0,
-                                  0, 0, 0, 0, 0, 0, 0, 0,
-                                  0, 0, 0, 0, 0, 0, 0, 0], dtype=np.uint8))
-    for k in set(y):
-        cluster_data = (y == k)
-        # project all data of that cluster to to two dimensions, using two hamming distances.
-        # d1 is the distance to [0  0 00 0 ]
-        # d2 is the distance to [11111]
-        d1 = compute_hamming_distances(X[cluster_data], on)
-        d2 = compute_hamming_distances(X[cluster_data], off)
-        # plt.scatter(X[cluster_data, 0], X[cluster_data, 1], c=next(colors), marker='.', s=50)
-        plt.scatter(d1, d2, c=next(colors), marker='.', s=50)
-        d1c = hamming(centroids[k], on)
-        d2c = hamming(centroids[k], off)
-        # plt.scatter(centroids[k][0], centroids[k][1], c='k', marker='.', s=200)
-        plt.scatter(d1c, d2c, c=next(colors), marker='*', s=50)
-        plt.annotate(str(k), (d1c, d2c))
-
-    plt.title("RESULT! Data clustered")
-    plt.show()
-    return
-
-
-def plot_results_isomap(X, y, centroids):
-    embedding = Isomap(n_components=2, metric='manhattan', p=1)
-    X_red = embedding.fit_transform(X)
-    plot_results(X_red, y, title='RESULT! Data clustered. Using ISOMAP CLUSTERING TO VISUALIZE')
-
-    # centroids_red = embedding.transform(centroids)
-    # colors = cycle(['r', 'g', 'b', 'k', 'c', 'm', 'y'])
-    #
-    # for k in set(y):
-    #     cluster_data = (y == k)
-    #     plt.scatter(X_red[cluster_data, 0], X_red[cluster_data, 1], c=next(colors), marker='.', s=50)
-    #     plt.scatter(centroids_red[k][0], centroids_red[k][1], c='k', marker='.', s=200)
-    # plt.title("RESULT! Data clustered. Using ISOMAP TO VISUALIZE")
-    # plt.show()
-
-
-def plot_results_spectral(X, y, centroids):
-    embedding = SpectralEmbedding(n_components=2)
-    X_red = embedding.fit_transform(X)
-    plot_results(X_red, y, title='RESULT! Data clustered. Using SPECTRAL CLUSTERING TO VISUALIZE')
-
-    #
-    # # centroids_red = embedding.transform(centroids)
-    # colors = cycle(['r', 'g', 'b', 'k', 'c', 'm', 'y'])
-    #
-    # for k in set(y):
-    #     cluster_data = (y == k)
-    #     plt.scatter(X_red[cluster_data, 0], X_red[cluster_data, 1], c=next(colors), marker='.', s=50)
-    #     # plt.scatter(centroids_red[k][0], centroids_red[k][1], c='k', marker='.', s=200)
-    # plt.title("RESULT! Data clustered. Using SPECTRAL CLUSTERING TO VISUALIZE")
-    # plt.show()
-
-def plot_results_TSNE(X, y, centroids):
-    embedding = TSNE(n_components=2,
-                     init='pca',
-                     perplexity=500)
-    X_red = embedding.fit_transform(X)
-    plot_results(X_red, y, title='RESULT! Data clustered. Using tsne TO VISUALIZE')
-
-
-
-def plot_results(X, y, title):
-    colors = cycle(['r', 'g', 'b', 'k', 'c', 'm', 'y'])
-    markers = cycle(['.', '+', 'o', '*', '1', 'p', 's', 'x', 'X'])
-    strs = []
-    i = 0
-    for k in set(y):
-        cluster_data = (y == k)
-        color = next(colors)
-        marker = next(markers)
-        plt.scatter(X[cluster_data, 0], X[cluster_data, 1], c=color, marker=marker, s=50)
-        # plt.scatter(centroids_red[k][0], centroids_red[k][1], c='k', marker='.', s=200)
-        strs.append(str(i))
-        i += 1
-    plt.legend(strs)
-    plt.title(title)
-    plt.show()
-
-
-def precompute_distances(X, labels, output_size_ratio):
-    idx = np.random.choice(len(X), int(len(X)*output_size_ratio), replace=False)
-    X = X[idx]
-    labels = labels[idx]
-    # create a square distance matrix
-    D = np.zeros((len(X), len(X)))
-    for i in range(len(X)):
-        for j in range(len(X)):
-            a = X[i, :]
-            b = X[j, :]
-            d = hamming(a, b)
-            D[i, j] = d
-    return D, labels
-
-
-def load_data(sampling=None, max_index=None):
-    all_descriptors = read_descriptors('data/descriptors.json')
-    all_descriptors = flatten_list(all_descriptors)
-    if max_index is None:
-        max_index = len(all_descriptors)
-    if sampling is None:
-        sampling = 1
-    all_descriptors = all_descriptors[0:max_index:sampling]
-    X = np.array(all_descriptors, np.uint8)
-    return X
-
-
-def save_bow_vectors(bow_vector, words, n_words, filename='bagofwords.json'):
-    """
-    Save the bag of words
-    """
-    data = {'bow_vector': bow_vector.tolist(),
-            'words': words.tolist(),
-            'n_words': n_words.tolist()}
-    with open(filename, 'w') as outfile:
-        json.dump(data, outfile)
+paths = EXPERIMENT_CONFIG.configurations.get('vocabulary_paths')
 
 
 if __name__ == '__main__':
-    n_samples = 5000
-    kw = 2
-    lw = 9
+    max_index = None
+    sampling = 1000
+    # branching factor
+    Kw = 3
+    # depth level of the tree
+    Lw = 6
+    min_number_of_points_per_cluster = 100
+    experiment_name = 'kw' + str(Kw)+'lw' + str(Lw)
+    print('COMPUTING HIERARCHICAL CLUSTERING TO COMPUTE VOCABULARY TREE')
+    print('PROCESSING THE FOLLOWING PATHS: ', paths)
     # load ORB DESCRIPTORS
-    X = load_data(sampling=1, max_index=n_samples)
-    # transform to binary descriptors (length is 256 bits)
-    X = np.unpackbits(X, axis=1)
+    X_im = load_ORB_data(paths=paths)
+    X = flatten_and_sampling(X_im, sampling=sampling, max_index=max_index)
+    print('VOCABULARY FORMED FROM: ', len(X_im), ' images')
+    print('TRYING TO CLUSTER: ', len(X), ' ORB descriptors')
 
-    kmeans_params = {'tol': 0.001,
+    kmeans_params = {'tol': 0.5,
                      'max_iter': 300,
                      'distance_function': 'hamming',
                      'centroid_replacement': False,
                      'averaging_function': 'mean-round', # this is majority voting for binary descriptors if unpacked
                      'init_method': 'kmeans++',
                      'plot_progress': True}
+
+    # X = generate_2D_data(n_samples=n_samples, centers=150)
+    # kmeans_params = {'tol': 0.001,
+    #                   'max_iter': 300,
+    #                   'distance_function': 'euclidean',
+    #                   'centroid_replacement': False,
+    #                   'averaging_function': 'mean',  # this is majority voting for binary descriptors if unpacked
+    #                   'init_method': 'kmeans++',
+    #                   'plot_progress': False}
     start_time = time.time()
-    hk = HKMeans(kw=kw, lw=lw, kmeans_params=kmeans_params)
-    hk.print_tree()
-    hk.fit(X)
-    elapsed_time = time.time() - start_time
-    hk.print_tree()
-    hk.print_words()
-    # hk.plot_tree_data(X)
-    print('Clustering took: ', elapsed_time, '(s)')
+    hk = HierarchicalClustering(data=X, Kw=Kw, Lw=Lw,
+                                kmeans_params=kmeans_params,
+                                min_number_of_points_per_cluster=min_number_of_points_per_cluster)
+    hk.fit()
 
-    print('Finding predictions via brute-force:')
-    start_time = time.time()
-    new_labels1, _ = hk.predict_brute_force(X)
-    elapsed_time = time.time() - start_time
-    print('Took: ', elapsed_time, '(s)')
-    print('Done predicting brute Force. found: ', len(set(new_labels1)), ' different labels')
+    # plot
+    print('INFO ON THE HIERARCHICAL TREE')
+    print('NODES OF THE TREE')
+    hk.print_tree_nodes(verbose=False)
+    # plot only the names of leaf nodes
+    print('LEAF NODES OF THE TREE')
+    hk.print_leaf_nodes(verbose=False)
+    # plot the data clustered hierarchically at different levels (graphics)
+    # hk.plot_hierarchical_data()
+    # plot leaf data (graphic)
+    # hk.plot_leaf_data()
+    hk.check_leaf_data(total_number=len(X))
 
-    print('Finding predictions via top-down:')
-    start_time = time.time()
-    new_labels2, _ = hk.predict_top_down(X)
-    elapsed_time = time.time() - start_time
-    print('Took: ', elapsed_time)
-    print('Done predicting top down. found: ', len(set(new_labels2)), ' different labels')
+    # compute the total inertia of the leaf nodes only!!!
+    total_inertia = hk.compute_total_inertia()
+    print('Total Inertia: ', total_inertia)
+    print('Total number of leaf nodes: ', len(hk.get_leaf_nodes()))
 
-    print("Clustered ", len(X), " n descriptors")
-    print('Trained a tree with (kw, lw): ', kw, ', ', lw)
-    print('Total number of nodes: ', hk.get_number_of_nodes())
-    print('Total number of leaves: ', hk.get_number_of_leaves())
-    print('Total number of words expected: ', hk.get_expected_number_of_words())
-    print('Total number of words found: ', hk.count_number_of_words())
-    print('Total cost of fit (at last hierarchy level): ', hk.get_total_cost())
-    print('Number of datapoints per leaf (WORD): ', hk.get_n_datapoints_per_word())
-    print('Fit time: ', elapsed_time, '(s)')
-    # use 10 percent of the smaples
-    # precompute distance matrix using hamming distance
-    D, sampled_labels = precompute_distances(X, new_labels2, .1)
-    # sil_score = silhouette_score(X, new_labels, sample_size=n_samples)
-    # using precomputed distance
-    sil_score = silhouette_score(D, sampled_labels, sample_size=n_samples, metric='precomputed')
-    print("Silhouette Coefficient of tree classification: ", sil_score)
+    # EXPORT to a Vocabulary class to be saved
+    vocabulary = hk.convert_to_vocabulary()
+    # given the vocabulary tree, get the words as a list
+    vocabulary.build_leaf_word_list()
 
+    # find n documents where word i appears in the database and compute
+    idf = vocabulary.compute_idf(X_im)
+    # save IDF
+    vocabulary.idf = idf
+    mean_idf = np.mean(idf)
+    cov_idf = np.cov(idf).item(0)
+    print('Mean IDF: ', mean_idf)
+    print('Cov IDF: ', cov_idf)
+    #tf = vocabulary.compute_tf(X_im)
 
-    # Xred = SparsePCA(n_components=2).fit_transform(X)
-    # plot_results_projecting(X, new_labels2, hk.leaf_centroids)
-    plot_results_isomap(X, new_labels1, hk.leaf_centroids)
-    plot_results_spectral(X, new_labels1, hk.leaf_centroids)
-    plot_results_TSNE(X, new_labels1, hk.leaf_centroids)
-
-
-
-    print('Creating vocabulary object!')
-    # create the vocabulary!!!
-    voc = hk.create_vocabulary()
-    print('Replacing centroids by true prototypes')
-    # optionally, replace each original word by the closest, real, existing descripotr
-    # no need to replace centroids if centroid_replacement=True
-    # voc.replace_centroids(X)
-    print('Saving vocabulary')
-    voc.save_json('voc.json')
-    print('Computing BOW vectors')
-    bow_vector_st, words, n_words = voc.compute_bows(X, option='standard')
-    print(bow_vector_st)
-    # bow_vector_bin, words, n_words = voc.compute_bows(X, option='binary')
-    # bow_vector_tfidf, words, n_words = voc.compute_bows(X, option='tfidf')
-
-    # save bag of word vectors
-    save_bow_vectors(bow_vector_st, words, n_words, 'bagofwords.json')
+    #bow_vector = vocabulary.compute_bow_vector(tf, idf)
+    print(30*'*')
+    print('VOCABULARY TREE')
+    print(30 * '*')
+    vocabulary.print_tree_words(verbose=False)
+    print(30 * '*')
+    print('VOCABULARY LEAFS')
+    print(30 * '*')
+    vocabulary.print_leaf_words(verbose=False)
+    print('SAVING VOCABULARY WITH PICKLE')
+    vocabulary.save_vocabulary('voc_' + experiment_name + '.pkl')
 
 
 

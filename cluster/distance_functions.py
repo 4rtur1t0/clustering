@@ -80,6 +80,9 @@ def compute_distance_function(data, centroid, distance_function='euclidean'):
         # iterate along samples to compute the hamming distance
         d = compute_hamming_distances(data, centroid)
         return d
+    else:
+        print('PLEASE INDICATE EITHER euclidean or hamming DISTANCE FUNCTIONS')
+        raise Exception
 
 
 def compute_hamming_distances(data, centroid):

@@ -1,0 +1,40 @@
+# descriptors will be computed and saved on the following routes
+# should be all your experiment paths
+all_paths:
+   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s0/0_1fps'
+   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s0/1_1fps'
+   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s1/0_1fps'
+   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s1/1_1fps'
+   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s1/2_1fps'
+   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s1/3_1fps'
+   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s2/0_1fps'
+   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s2/1_1fps'
+   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s2/2_1fps'
+   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s2/3_1fps'
+   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s2/4_1fps'
+#   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s3/0_1fps'
+#   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s3/1_1fps'
+#   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s3/2_1fps'
+#   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s3/3_1fps'
+
+# vocabulary will be built with these paths
+vocabulary_paths:
+   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s0/0_1fps'
+   #- '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s1/0_1fps'
+   #- '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s1/3_1fps'
+   #- '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s2/0_1fps'
+
+
+# map will be built with these paths
+map_paths:
+   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s1/1_1fps'
+#   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s1/2_1fps'
+#   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s2/1_1fps'
+#   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s2/2_1fps'
+
+
+# vocabulary will be built with these paths
+test_trajectory_paths:
+   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s2/3_1fps'
+   - '/media/arvc/50324D7B324D6756/datasets/VIRB360/euroc/s2/4_1fps'
+
